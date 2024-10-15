@@ -1,0 +1,45 @@
+import cv2
+import numpy as np
+from tkinter import Tk
+from tkinter.filedialog import askopenfilename
+
+# Create a function to open file dialog and select an image
+def load_image_via_dialog():
+    Tk().withdraw()  # Close the root window
+    filepath = askopenfilename(filetypes=[("Image Files", "*.jpeg;*.jpg;*.png")])
+    if filepath:
+        return cv2.imread(filepath, 0)  # Read in grayscale
+    else:
+        print("No file selected")
+        return None
+
+# Load the scanned signature and stored signature images via file dialog
+scanned_signature = load_image_via_dialog()
+stored_signature = load_image_via_dialog()
+
+# Proceed if both images are loaded successfully
+if scanned_signature is not None and stored_signature is not None:
+    # Resize the images to the same dimensions
+    scanned_signature = cv2.resize(scanned_signature, (300, 150))
+    stored_signature = cv2.resize(stored_signature, (300, 150))
+
+    # Apply Canny edge detection
+    edges_scanned = cv2.Canny(scanned_signature, 50, 200)
+    edges_stored = cv2.Canny(stored_signature, 50, 200)
+
+    # Use template matching (Cross Correlation) to compare the two signatures
+    result = cv2.matchTemplate(edges_scanned, edges_stored, cv2.TM_CCOEFF_NORMED)
+
+    # Get the best match score
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+
+    # Print similarity score (0 to 1, where 1 is a perfect match)
+    print(f'Similarity score: {max_val}')
+
+    # Set a similarity threshold to determine if signatures match
+    if max_val > 0.8:  # Adjust the threshold based on your use case
+        print("Signatures matched!")
+    else:
+        print("Signatures didn't match!")
+else:
+    print("Failed to load images...")

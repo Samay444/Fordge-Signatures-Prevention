@@ -1,0 +1,73 @@
+import cv2  # OpenCV library for image processing
+import numpy as np
+from fastdtw import fastdtw
+from scipy.spatial.distance import euclidean
+from tkinter import Tk
+from tkinter.filedialog import askopenfilename
+
+# Function to extract signature stroke points from an image
+def extract_signature_points(image_path):
+    # Step 1: Read the image
+    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    if image is None:
+        print(f"Error: Unable to read image {image_path}")
+        return None  # Exit the function if the image cannot be loaded
+    
+    # Step 2: Threshold the image to get binary representation
+    _, binary_image = cv2.threshold(image, 150, 255, cv2.THRESH_BINARY_INV)
+    
+    # Step 3: Find contours (these represent the signature strokes)
+    contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # Step 4: Extract the coordinates of the contours (the signature strokes)
+    points = []
+    for contour in contours:
+        for point in contour:
+            points.append(point[0])  # Append x, y coordinates of each point
+
+    # Step 5: Convert list of points to NumPy array
+    points = np.array(points)
+    
+    return points
+
+# Function to open a file dialog and get the file path
+def get_image_path():
+    Tk().withdraw()  # We don't want a full GUI, so keep the root window from appearing
+    return askopenfilename(title="Select an Image", filetypes=[("Image Files", "*.jpg *.png *.jpeg")])
+
+# Main logic to select images and compare them
+def main():
+    # Get image paths using the file dialog
+    print("Select the stored signature image:")
+    stored_signature_path = get_image_path()
+    
+    print("Select the scanned signature image:")
+    scanned_signature_path = get_image_path()
+
+    # Check if paths are valid
+    if not stored_signature_path or not scanned_signature_path:
+        print("Error: One or both image files were not selected.")
+        return
+    
+    # Example usage: extracting points from two signature images
+    stored_signature_points = extract_signature_points(stored_signature_path)
+    scanned_signature_points = extract_signature_points(scanned_signature_path)
+    
+    if stored_signature_points is None or scanned_signature_points is None:
+        print("Error: Failed to load one or both images.")
+        return
+    
+    # Calculate the dynamic time warping distance between the two point sequences
+    distance, path = fastdtw(stored_signature_points, scanned_signature_points, dist=euclidean)
+    
+    # Print DTW distance (lower distance means more similarity)
+    print(f'DTW Distance: {distance}')
+    
+    # Set a distance threshold to determine if signatures match
+    if distance < 5:
+        print("Signatures match!")
+    else:
+        print("Signatures do not match.")
+
+if __name__ == "__main__":
+    main()
